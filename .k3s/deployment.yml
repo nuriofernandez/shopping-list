@@ -2,7 +2,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: shopping-nurio-me-deployment
+  name: shopping-nurio-me
   namespace: shopping-nurio-me
   labels:
     app: shopping-nurio-me
