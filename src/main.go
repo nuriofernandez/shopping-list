@@ -168,7 +168,7 @@ func main() {
 	origins := handlers.AllowedOrigins([]string{"*"})
 
 	// 3. Start the server
-	port := "8080"
+	port := "80"
 	log.Printf("Starting API server on :%s", port)
 	log.Fatal(http.ListenAndServe(":"+port, handlers.CORS(headers, methods, origins)(router)))
 }
