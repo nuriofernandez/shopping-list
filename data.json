@@ -1,0 +1,42 @@
+{
+  "catalog": [
+    {
+      "id": "id-1759677988463-6149",
+      "imageUrl": "https://i.imgur.com/syOhcH9.png",
+      "name": "Bolsas de basura"
+    },
+    {
+      "id": "id-1759678035653-6434",
+      "imageUrl": "https://i.imgur.com/ksa8LMl.jpeg",
+      "name": "Papel WC"
+    },
+    {
+      "id": "id-1759678054491-868",
+      "imageUrl": "https://i.imgur.com/ugK8qNs.jpeg",
+      "name": "Papel Cocina"
+    },
+    {
+      "id": "id-1759684651324-4448",
+      "imageUrl": "https://prod-mercadona.imgix.net/images/5bd047881961f8b0d75b872f9fca6c37.jpg?fit=crop\u0026h=600\u0026w=600",
+      "name": "Pasta vegetal"
+    }
+  ],
+  "pendingList": [
+    {
+      "itemId": "id-1759677988463-6149",
+      "quantity": 1
+    },
+    {
+      "itemId": "id-1759678035653-6434",
+      "quantity": 1
+    },
+    {
+      "itemId": "id-1759678054491-868",
+      "quantity": 1
+    },
+    {
+      "itemId": "id-1759684651324-4448",
+      "quantity": 1
+    }
+  ]
+}

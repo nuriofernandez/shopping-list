@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Shopping List</title>
+    <link rel="apple-touch-icon" href="https://i.imgur.com/lUSGTrX.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary-500': '#3b82f6', // blue-500
+                        'primary-600': '#2563eb', // blue-600
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom styles for mobile-first design and modern look */
+        body {
+            background-color: #2563eb; /* Dark blue background */
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        #app {
+            /* Restricting width for a mobile-like card effect */
+            margin: 0 auto;
+            min-height: 100vh;
+            background-color: white;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+            padding-bottom: 72px; /* Space for fixed bottom menu */
+        }
+        .item-card {
+            transition: all 0.2s ease-in-out;
+        }
+        .item-card:active {
+            transform: scale(0.98);
+        }
+        .quantity-btn {
+            width: 3rem;
+            height: 3rem;
+            font-size: 1.5rem;
+            line-height: 1;
+        }
+        /* Ensure footer sticks to the max width of the app container */
+        #bottom-nav {
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        /* PULLED-TO-REFRESH STYLES */
+        #pull-to-refresh-indicator {
+            height: 0;
+            overflow: hidden;
+            transition: height 0.3s ease-out;
+        }
+
+        /* Spinner for loading state */
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3b82f6; /* primary-500 */
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+<div id="app" class="flex flex-col">
+
+    <header class="p-4 bg-primary-600 text-white shadow-lg sticky top-0 z-10">
+        <h1 id="header-title" class="text-2xl font-bold">Shopping List</h1>
+    </header>
+
+    <div id="top-status-bar" class="sticky top-[72px] left-0 right-0 z-10 hidden p-3 text-center transition-all duration-300">
+        <div id="status-content" class="flex items-center justify-center space-x-2 bg-white p-2 rounded-lg shadow-md border">
+        </div>
+    </div>
+
+    <div id="pull-to-refresh-indicator" class="flex justify-center items-center bg-white border-b border-gray-100">
+        <div id="ptr-message" class="text-gray-500 text-sm py-2 px-4 flex items-center space-x-2">
+        </div>
+    </div>
+
+    <main id="content-area" class="flex-grow p-4"></main>
+
+    <div id="message-box" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-50">
+        <div class="bg-white p-6 rounded-xl shadow-2xl flex flex-col items-center max-w-sm w-full">
+            <div id="message-content" class="text-center font-medium mb-4"></div>
+            <button id="message-close-btn" class="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition">OK</button>
+        </div>
+    </div>
+
+    <footer id="bottom-nav" class="fixed bottom-0 w-full bg-white border-t border-gray-200 shadow-2xl p-3 flex justify-around items-center z-20">
+        <button id="nav-pending" class="flex flex-col items-center text-sm text-primary-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+            <span class="mt-1">Pending</span>
+        </button>
+        <button id="nav-add" class="w-16 h-16 rounded-full bg-primary-500 text-white shadow-xl hover:bg-primary-600 transition transform -translate-y-4 flex items-center justify-center text-3xl font-bold">
+            +
+        </button>
+        <button id="nav-manage" class="flex flex-col items-center text-sm text-gray-500 hover:text-primary-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.526.31.81.332 1.065-.084 1.066-.084.707 1.066.824 1.724 1.724 0 001.724 1.724.81.81.332 1.065-.084 1.066z"></path></svg>
+            <span class="mt-1">Manage</span>
+        </button>
+    </footer>
+</div>
+
+<script>
+    const API_URL = '/data';
+    const appData = {
+        catalog: [],      // Stores { id, name, imageUrl } - The blueprints
+        pendingList: [],  // Stores { itemId, quantity } - What needs to be bought
+    };
+
+    let currentView = 'pending'; // 'pending', 'add', 'manage', 'edit'
+    let editingItemId = null; // Used for 'edit' view
+
+    // --- NEW Status Functions ---
+    const topStatusBar = document.getElementById('top-status-bar');
+    const statusContent = document.getElementById('status-content');
+
+    /** Displays a transient message in the top status bar. */
+    function showStatusMessage(message, type = 'info') {
+        // Clear existing classes
+        statusContent.className = 'flex items-center justify-center space-x-2 p-2 rounded-lg shadow-md border';
+
+        // Set message text and color based on type
+        let textColor = 'text-gray-700';
+        let borderColor = 'border-gray-200';
+
+        if (type === 'error') {
+            textColor = 'text-red-600 font-bold';
+            borderColor = 'border-red-300';
+        } else if (type === 'success') {
+            textColor = 'text-green-600 font-bold';
+            borderColor = 'border-green-100';
+        }
+
+        statusContent.classList.add('bg-white', borderColor);
+        statusContent.innerHTML = `<span class="${textColor}">${message}</span>`;
+        topStatusBar.classList.remove('hidden');
+
+        // Automatically hide success/info messages after a short delay
+        if (type === 'success' || type === 'info') {
+            setTimeout(() => {
+                topStatusBar.classList.add('hidden');
+            }, 500);
+        }
+    }
+
+    /** Displays the loading spinner in the top status bar. */
+    function showLoadingIndicator() {
+        statusContent.className = 'flex items-center justify-center space-x-2 bg-white p-2 rounded-lg shadow-md border border-primary-300';
+        statusContent.innerHTML = `<div class="spinner"></div><span class="text-primary-600 font-medium">Loading...</span>`;
+        topStatusBar.classList.remove('hidden');
+    }
+
+    /** Hides the top status bar. */
+    function hideLoadingIndicator() {
+        topStatusBar.classList.add('hidden');
+    }
+
+    /** Shows a *modal* alert box (used for permanent errors or form confirmations). */
+    function showMessage(message, type = 'info') {
+        const messageBox = document.getElementById('message-box');
+        const messageContent = document.getElementById('message-content');
+
+        let style = '';
+        if (type === 'error') {
+            style = 'text-red-600 font-bold';
+        } else if (type === 'success') {
+            style = 'text-green-600 font-bold';
+        }
+
+        messageContent.className = `text-center font-medium mb-4 ${style}`;
+        messageContent.textContent = message;
+        messageBox.classList.remove('hidden');
+        messageBox.classList.add('flex');
+    }
+
+    document.getElementById('message-close-btn').addEventListener('click', () => {
+        document.getElementById('message-box').classList.remove('flex');
+        document.getElementById('message-box').classList.add('hidden');
+    });
+
+    /** Generates a simple, unique ID using timestamp and a small random number. */
+    const generateId = () => `id-${Date.now()}-${Math.floor(Math.random() * 9999)}`;
+
+    /** Handles API calls with exponential backoff for resilience. */
+    async function apiCall(method, body = null, retries = 3) {
+        const options = {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            mode: 'cors'
+        };
+
+        if (body) {
+            options.body = JSON.stringify(body);
+        }
+
+        for (let i = 0; i < retries; i++) {
+            try {
+                const response = await fetch(API_URL, options);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+
+                if (method === 'GET') {
+                    const text = await response.text();
+                    return text ? JSON.parse(text) : null;
+                }
+                return true; // Success for PUT
+            } catch (error) {
+                console.error(`Attempt ${i + 1} failed for ${method}:`, error);
+                if (i === retries - 1) {
+                    throw new Error(`Failed to communicate with API after ${retries} attempts. Please check the URL and network.`);
+                }
+                await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
+            }
+        }
+    }
+
+    /** Saves the current application state to the API. */
+    async function saveData() {
+        try {
+            const dataToSave = {
+                catalog: appData.catalog,
+                pendingList: appData.pendingList
+            };
+            await apiCall('PUT', dataToSave);
+            console.log('Data saved successfully.');
+        } catch (error) {
+            console.error('Failed to save data:', error);
+            // Use modal message for persistent save errors
+            showMessage(`Error saving data: ${error.message}`, 'error');
+        }
+    }
+
+    /** Loads the initial state from the API. */
+    async function loadData() {
+        let success = false;
+        try {
+            // Use loading indicator for initial/manual load
+            if (!isPullToRefreshActive) {
+                showLoadingIndicator();
+            }
+
+            const data = await apiCall('GET');
+
+            if (data && data.catalog && data.pendingList) {
+                appData.catalog = data.catalog;
+                appData.pendingList = data.pendingList;
+                console.log('Data loaded successfully:', appData);
+                success = true;
+            } else {
+                console.log('API returned empty or invalid data, initializing fresh state.');
+            }
+
+        } catch (error) {
+            console.error('Failed to load data:', error);
+            // Show status bar error if it's NOT a PTR action
+            if (!isPullToRefreshActive) {
+                showStatusMessage(`Error loading data: ${error.message}`, 'error');
+            }
+            success = false;
+
+        } finally {
+            render();
+            // Hide the loading indicator only if it wasn't a PTR load
+            if (!isPullToRefreshActive) {
+                hideLoadingIndicator();
+            }
+        }
+        return success; // Crucial for PTR flow
+    }
+
+    // --- Navigation and Rendering (all unchanged) ---
+
+    function navigate(view, itemId = null) {
+        currentView = view;
+        editingItemId = itemId;
+
+        const titleMap = {
+            'pending': 'Shopping List',
+            'add': 'Add Item',
+            'manage': 'Manage Items',
+            'edit': 'Edit Item'
+        };
+        document.getElementById('header-title').textContent = titleMap[view] || 'Shopping List';
+
+        // Update nav bar active state (simple way)
+        document.querySelectorAll('#bottom-nav button').forEach(btn => {
+            btn.classList.remove('text-primary-600');
+            if (btn.id === 'nav-pending' && (view === 'pending' || view === 'edit')) {
+                btn.classList.add('text-primary-600');
+            } else if (btn.id === 'nav-add' && view === 'add') {
+                btn.classList.add('text-primary-600');
+            } else if (btn.id === 'nav-manage' && view === 'manage') {
+                btn.classList.add('text-primary-600');
+            }
+            // For 'add' icon, always blue if not on 'pending' or 'manage'
+            if (btn.id === 'nav-add' && view !== 'pending' && view !== 'manage') {
+                btn.classList.remove('text-white');
+                btn.classList.remove('bg-primary-500');
+                btn.classList.remove('hover:bg-primary-600');
+                btn.classList.add('text-primary-500');
+                btn.classList.add('bg-white');
+                btn.classList.add('shadow-md');
+                btn.classList.add('border-2');
+                btn.classList.add('border-primary-500');
+            } else if (btn.id === 'nav-add' && (view === 'pending' || view === 'manage')) {
+                btn.classList.add('text-white');
+                btn.classList.add('bg-primary-500');
+                btn.classList.add('hover:bg-primary-600');
+                btn.classList.remove('text-primary-500');
+                btn.classList.remove('bg-white');
+                btn.classList.remove('shadow-md');
+                btn.classList.remove('border-2');
+                btn.classList.remove('border-primary-500');
+            }
+        });
+
+        render();
+    }
+
+    function render() {
+        const contentArea = document.getElementById('content-area');
+        contentArea.innerHTML = '';
+
+        switch (currentView) {
+            case 'pending':
+                renderPendingList(contentArea);
+                break;
+            case 'add':
+                renderAddItemView(contentArea);
+                break;
+            case 'manage':
+                renderManageCatalog(contentArea);
+                break;
+            case 'edit':
+                renderEditItemForm(contentArea, editingItemId);
+                break;
+        }
+    }
+
+    function renderPendingList(container) {
+        if (appData.pendingList.length === 0) {
+            container.innerHTML = `
+                <div class="text-center p-8 bg-gray-50 rounded-xl mt-8">
+                    <p class="text-gray-500 text-lg">Your shopping list is empty! ${currentView === 'pending' ? 'Pull down to refresh data.' : ''}</p>
+                    <p class="text-gray-400 mt-2">Tap the (+) button to add items.</p>
+                </div>
+            `;
+            return;
+        }
+
+        const listHtml = appData.pendingList.map(pendingItem => {
+            const item = appData.catalog.find(c => c.id === pendingItem.itemId);
+            if (!item) return '';
+
+            // Fallback image in case URL fails
+            const fallbackImage = `https://placehold.co/100x100/f3f4f6/9ca3af?text=N/A`;
+
+            return `
+                <div class="item-card flex items-center p-3 mb-3 bg-white border border-gray-100 rounded-xl shadow-md">
+                    <img src="${item.imageUrl || ''}"
+                         onerror="this.onerror=null;this.src='${fallbackImage}'"
+                         alt="${item.name}"
+                         class="w-20 h-20 object-cover rounded-lg mr-4 border border-gray-200 flex-shrink-0">
+
+                    <div class="flex-grow flex flex-col justify-center">
+                        <p class="text-lg font-semibold text-gray-800 break-words">${item.name}</p>
+
+                        <div class="flex items-center justify-between mt-2">
+                            <div class="flex items-center space-x-2">
+                                <button data-id="${pendingItem.itemId}" data-action="decrease" class="quantity-btn bg-red-100 text-red-600 rounded-full flex items-center justify-center shadow-inner hover:bg-red-200 transition">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
+                                </button>
+
+                                <span class="text-xl font-bold text-gray-900 w-8 text-center">${pendingItem.quantity}</span>
+
+                                <button data-id="${pendingItem.itemId}" data-action="increase" class="quantity-btn bg-green-100 text-green-600 rounded-full flex items-center justify-center shadow-inner hover:bg-green-200 transition">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                </button>
+                            </div>
+
+                            <button data-id="${pendingItem.itemId}" data-action="remove" class="p-3 bg-primary-500 text-white rounded-lg shadow-md hover:bg-primary-600 transition">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        container.innerHTML = `
+            <div class="space-y-3">
+                ${listHtml}
+            </div>
+        `;
+
+        // Add event listeners for quantity/remove buttons
+        container.querySelectorAll('button[data-id]').forEach(button => {
+            button.addEventListener('click', handlePendingAction);
+        });
+    }
+
+    function filterAddItemCatalog(filterText) {
+        const listContainer = document.getElementById('add-catalog-list-container');
+        if (!listContainer) return;
+
+        const searchTerm = filterText.toLowerCase().trim();
+
+        const filteredCatalog = appData.catalog.filter(item =>
+            item.name.toLowerCase().includes(searchTerm)
+        );
+
+        if (filteredCatalog.length === 0) {
+            listContainer.innerHTML = `
+                <div class="text-center text-gray-400 p-4">No items found matching "${filterText}".</div>
+            `;
+            return;
+        }
+
+        const fallbackImage = `https://placehold.co/80x80/e5e7eb/4b5563?text=N/A`;
+        const catalogListHtml = filteredCatalog.map(item => {
+            return `
+                <div data-id="${item.id}" class="item-card flex items-center p-3 mb-2 bg-white border border-gray-200 rounded-xl shadow-sm hover:bg-gray-50 cursor-pointer transition" onclick="addItemToPending('${item.id}'); navigate('pending');">
+                    <img src="${item.imageUrl || ''}"
+                         onerror="this.onerror=null;this.src='${fallbackImage}'"
+                         alt="${item.name}"
+                         class="w-12 h-12 object-cover rounded-lg mr-4 border border-gray-100">
+                    <p class="text-base font-medium text-gray-800">${item.name}</p>
+                </div>
+            `;
+        }).join('');
+
+        listContainer.innerHTML = catalogListHtml;
+    }
+
+    function renderAddItemView(container) {
+
+        container.innerHTML = `
+            <h2 class="text-xl font-bold mb-3 text-gray-700">Select Existing Item</h2>
+
+            <div class="relative mb-3">
+                <input type="text" id="add-item-search" placeholder="Search catalog..." class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500">
+                <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            </div>
+
+            <div id="add-catalog-list-scroll-area" class="mb-6 max-h-60 overflow-y-auto p-2 bg-gray-50 rounded-lg border border-gray-100">
+                <div id="add-catalog-list-container">
+                    </div>
+            </div>
+
+            <div class="my-6 border-t border-gray-200 pt-6">
+                <h2 class="text-xl font-bold mb-4 text-gray-700">Create New Item</h2>
+                <form id="new-item-form" class="space-y-4">
+                    <div>
+                        <label for="new-item-name" class="block text-sm font-medium text-gray-700">Item Name</label>
+                        <input type="text" id="new-item-name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500">
+                    </div>
+                    <div>
+                        <label for="new-item-image" class="block text-sm font-medium text-gray-700">Image URL (Optional)</label>
+                        <input type="url" id="new-item-image" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500" placeholder="https://example.com/image.jpg">
+                    </div>
+                    <button type="submit" class="w-full py-3 px-4 bg-primary-500 text-white font-semibold rounded-lg shadow-md hover:bg-primary-600 transition transform hover:scale-[1.01]">
+                        Create & Add to List
+                    </button>
+                </form>
+            </div>
+        `;
+
+        filterAddItemCatalog('');
+
+        document.getElementById('add-item-search').addEventListener('input', (event) => {
+            filterAddItemCatalog(event.target.value);
+        });
+
+        document.getElementById('new-item-form').addEventListener('submit', handleNewItemSubmit);
+    }
+
+    function renderManageCatalog(container) {
+        if (appData.catalog.length === 0) {
+            container.innerHTML = `
+                <div class="text-center p-8 bg-gray-50 rounded-xl mt-8">
+                    <p class="text-gray-500 text-lg">Your catalog is empty.</p>
+                    <p class="text-gray-400 mt-2">Go to "Add Item" to create your first blueprint.</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = `
+            <p class="text-gray-500 mb-4">Tap an item below to modify its name or image URL.</p>
+
+            <div class="relative mb-4">
+                <input type="text" id="manage-search" placeholder="Search items..." class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500">
+                <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            </div>
+
+            <div id="manage-catalog-list" class="space-y-3">
+                </div>
+        `;
+
+        filterManageCatalog('');
+
+        document.getElementById('manage-search').addEventListener('input', (event) => {
+            filterManageCatalog(event.target.value);
+        });
+    }
+
+    function filterManageCatalog(filterText) {
+        const listContainer = document.getElementById('manage-catalog-list');
+        if (!listContainer) return;
+
+        const searchTerm = filterText.toLowerCase().trim();
+
+        const filteredCatalog = appData.catalog.filter(item =>
+            item.name.toLowerCase().includes(searchTerm)
+        );
+
+        if (filteredCatalog.length === 0) {
+            listContainer.innerHTML = `
+                <div class="text-center p-8 bg-gray-50 rounded-xl mt-4">
+                    <p class="text-gray-500 text-lg">No items found matching "${filterText}"</p>
+                </div>
+            `;
+            return;
+        }
+
+        const catalogListHtml = filteredCatalog.map(item => {
+            const fallbackImage = `https://placehold.co/80x80/e5e7eb/4b5563?text=N/A`;
+
+            return `
+                <div data-id="${item.id}" class="item-card flex items-center p-3 mb-2 bg-white border border-gray-200 rounded-xl shadow-sm hover:bg-gray-50 cursor-pointer transition">
+                    <img src="${item.imageUrl || ''}"
+                         onerror="this.onerror=null;this.src='${fallbackImage}'"
+                         alt="${item.name}"
+                         class="w-12 h-12 object-cover rounded-lg mr-4 border border-gray-100">
+
+                    <p class="text-base font-medium text-gray-800 flex-grow">${item.name}</p>
+
+                    <button data-id="${item.id}" data-action="edit" class="p-2 bg-yellow-100 text-yellow-600 rounded-full hover:bg-yellow-200 transition ml-4" onclick="navigate('edit', '${item.id}')">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                    </button>
+                </div>
+            `;
+        }).join('');
+
+        listContainer.innerHTML = catalogListHtml;
+    }
+
+    function renderEditItemForm(container, itemId) {
+        const itemToEdit = appData.catalog.find(c => c.id === itemId);
+        if (!itemToEdit) {
+            container.innerHTML = `<div class="text-red-500">Error: Item not found.</div>`;
+            return;
+        }
+
+        container.innerHTML = `
+            <form id="edit-item-form" class="space-y-6 bg-white p-6 rounded-xl shadow-md">
+                <div class="text-center">
+                    <img id="edit-preview-image" src="${itemToEdit.imageUrl || 'https://placehold.co/100x100/f3f4f6/9ca3af?text=Preview'}"
+                         onerror="this.onerror=null;this.src='https://placehold.co/100x100/f3f4f6/9ca3af?text=Preview'"
+                         alt="Image Preview"
+                         class="w-24 h-24 object-cover rounded-full mx-auto mb-4 border-4 border-primary-500 shadow-lg">
+                </div>
+
+                <div>
+                    <label for="edit-item-name" class="block text-sm font-medium text-gray-700">Item Name</label>
+                    <input type="text" id="edit-item-name" value="${itemToEdit.name}" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500">
+                </div>
+
+                <div>
+                    <label for="edit-item-image" class="block text-sm font-medium text-gray-700">Image URL (Optional)</label>
+                    <input type="url" id="edit-item-image" value="${itemToEdit.imageUrl || ''}" class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500" placeholder="https://example.com/image.jpg">
+                    <p class="text-xs text-gray-400 mt-1">Updates in real-time above.</p>
+                </div>
+
+                <button type="submit" class="w-full py-3 px-4 bg-green-500 text-white font-semibold rounded-lg shadow-md hover:bg-green-600 transition">
+                    Save Changes
+                </button>
+                <button type="button" onclick="navigate('manage')" class="w-full py-3 px-4 bg-gray-300 text-gray-800 font-semibold rounded-lg shadow-md hover:bg-gray-400 transition">
+                    Cancel / Back to Manage
+                </button>
+            </form>
+        `;
+
+        const imageInput = document.getElementById('edit-item-image');
+        imageInput.addEventListener('input', (e) => {
+            const previewImg = document.getElementById('edit-preview-image');
+            previewImg.src = e.target.value;
+        });
+
+        document.getElementById('edit-item-form').addEventListener('submit', (e) => handleEditItemSubmit(e, itemId));
+    }
+
+
+    // --- Event Handlers (all unchanged) ---
+    function handlePendingAction(event) {
+        const button = event.currentTarget;
+        const itemId = button.getAttribute('data-id');
+        const action = button.getAttribute('data-action');
+
+        const index = appData.pendingList.findIndex(p => p.itemId === itemId);
+
+        if (index === -1) {
+            console.error('Pending item not found.');
+            return;
+        }
+
+        switch (action) {
+            case 'increase':
+                appData.pendingList[index].quantity += 1;
+                break;
+            case 'decrease':
+                if (appData.pendingList[index].quantity > 1) {
+                    appData.pendingList[index].quantity -= 1;
+                }
+                break;
+            case 'remove':
+                appData.pendingList.splice(index, 1);
+                showStatusMessage('Item marked as purchased!', 'success'); // Changed to showStatusMessage
+                break;
+        }
+
+        saveData();
+        render();
+    }
+
+    function handleNewItemSubmit(event) {
+        event.preventDefault();
+
+        const nameInput = document.getElementById('new-item-name');
+        const imageInput = document.getElementById('new-item-image');
+
+        const name = nameInput.value.trim();
+        const imageUrl = imageInput.value.trim();
+
+        if (name === '') {
+            showMessage('Item name is required.', 'error'); // Kept as modal for form validation
+            return;
+        }
+
+        let existingItem = appData.catalog.find(c => c.name.toLowerCase() === name.toLowerCase());
+
+        if (!existingItem) {
+            const newItemId = generateId();
+            existingItem = { id: newItemId, name: name, imageUrl: imageUrl };
+            appData.catalog.push(existingItem);
+            showStatusMessage(`New item '${name}' created!`, 'success'); // Changed to showStatusMessage
+        } else {
+            showStatusMessage(`Item '${name}' already exists in catalog, adding to pending list.`, 'info'); // Changed to showStatusMessage
+        }
+
+        addItemToPending(existingItem.id);
+
+        nameInput.value = '';
+        imageInput.value = '';
+        navigate('pending');
+    }
+
+    function addItemToPending(itemId) {
+        const pendingIndex = appData.pendingList.findIndex(p => p.itemId === itemId);
+
+        if (pendingIndex !== -1) {
+            appData.pendingList[pendingIndex].quantity += 1;
+            const item = appData.catalog.find(c => c.id === itemId);
+            showStatusMessage(`Added one more ${item.name}!`, 'info'); // Changed to showStatusMessage
+        } else {
+            appData.pendingList.push({ itemId: itemId, quantity: 1 });
+            const item = appData.catalog.find(c => c.id === itemId);
+            showStatusMessage(`Added ${item.name} to list!`, 'success'); // Changed to showStatusMessage
+        }
+
+        saveData();
+    }
+
+    function handleEditItemSubmit(event, itemId) {
+        event.preventDefault();
+
+        const nameInput = document.getElementById('edit-item-name');
+        const imageInput = document.getElementById('edit-item-image');
+
+        const name = nameInput.value.trim();
+        const imageUrl = imageInput.value.trim();
+
+        if (name === '') {
+            showMessage('Item name is required.', 'error'); // Kept as modal for form validation
+            return;
+        }
+
+        const itemIndex = appData.catalog.findIndex(c => c.id === itemId);
+
+        if (itemIndex !== -1) {
+            appData.catalog[itemIndex].name = name;
+            appData.catalog[itemIndex].imageUrl = imageUrl;
+            showStatusMessage(`Catalog item updated successfully!`, 'success'); // Changed to showStatusMessage
+            saveData();
+            navigate('manage');
+        } else {
+            showMessage('Error: Item to edit was not found.', 'error'); // Kept as modal for permanent error
+            navigate('manage');
+        }
+    }
+
+
+    // --- Pull-to-Refresh Logic (unchanged except for status updates) ---
+    let startY = 0;
+    let isPulling = false;
+    let isRefreshing = false;
+    let isPullToRefreshActive = false;
+    const PULL_THRESHOLD = 80; // Pixels to pull down before triggering refresh
+    const INDICATOR_HEIGHT = 40; // The height of the indicator when active
+
+    const indicator = document.getElementById('pull-to-refresh-indicator');
+    const ptrMessage = document.getElementById('ptr-message');
+    const contentArea = document.getElementById('content-area');
+
+    /** Function to update the pull-to-refresh indicator UI based on pull distance. */
+    function updatePtrUI(pullDistance) {
+        if (isRefreshing) return;
+
+        // Apply tension visually, but use the true pullDistance for logic.
+        // Cap and dampen the visual height (pullDistance * 0.5)
+        const tension = Math.min(pullDistance, PULL_THRESHOLD * 1.5) * 0.5;
+
+        indicator.style.height = `${tension}px`;
+
+        ptrMessage.innerHTML = '';
+        if (pullDistance >= PULL_THRESHOLD) { // Check against the original PULL_THRESHOLD (80px)
+            ptrMessage.innerHTML = `<svg class="w-5 h-5 text-green-500 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7l4-4m0 0l4 4m-4-4v18"></path></svg><span>Release to refresh</span>`;
+        } else if (pullDistance > 0) {
+            const rotation = (pullDistance / PULL_THRESHOLD) * 180;
+            ptrMessage.innerHTML = `<svg class="w-5 h-5 text-gray-500 transform rotate-${rotation}" style="transform: rotate(${rotation}deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7l4-4m0 0l4 4m-4-4v18"></path></svg><span>Pull down to refresh</span>`;
+        }
+    }
+
+    // Touch Start Handler
+    function handleTouchStart(e) {
+        if (contentArea.scrollTop === 0 && currentView === 'pending') {
+            startY = e.touches[0].clientY;
+            isPulling = true;
+            isPullToRefreshActive = false;
+        } else {
+            isPulling = false;
+        }
+    }
+
+    // Touch Move Handler
+    function handleTouchMove(e) {
+        if (!isPulling || isRefreshing) return;
+
+        const currentY = e.touches[0].clientY;
+        const pullDistance = currentY - startY;
+
+        if (pullDistance > 0 && contentArea.scrollTop === 0) {
+            e.preventDefault();
+            isPullToRefreshActive = true;
+            updatePtrUI(pullDistance);
+        } else if (contentArea.scrollTop > 0) {
+            isPulling = false;
+            indicator.style.height = '0px';
+        }
+    }
+
+    // Touch End Handler
+    async function handleTouchEnd() {
+        if (!isPulling || isRefreshing) {
+            isPulling = false;
+            return;
+        }
+
+        const visualHeight = parseFloat(indicator.style.height || '0');
+        const simulatedPullDistance = visualHeight * 2;
+
+        if (simulatedPullDistance >= PULL_THRESHOLD) {
+            // 1. Trigger Refresh UI
+            isRefreshing = true;
+            indicator.style.height = `${INDICATOR_HEIGHT}px`;
+            ptrMessage.innerHTML = `<div class="spinner"></div><span>Refreshing...</span>`;
+
+            // 2. Perform Data Load
+            const loadSuccess = await loadData();
+
+            // 3. Complete Refresh
+            isRefreshing = false;
+            isPullToRefreshActive = false;
+            indicator.style.height = '0px';
+
+            if (!loadSuccess) {
+                showStatusMessage('Refresh failed. Check network.', 'error'); // Changed to showStatusMessage
+            }
+        } else {
+            // 4. Reset UI if pull was too short
+            indicator.style.height = '0px';
+            isPullToRefreshActive = false;
+        }
+
+        isPulling = false;
+    }
+
+
+    // --- Initialization ---
+
+    /** Setup navigation event listeners. */
+    function setupListeners() {
+        document.getElementById('nav-pending').addEventListener('click', () => navigate('pending'));
+        document.getElementById('nav-add').addEventListener('click', () => navigate('add'));
+        document.getElementById('nav-manage').addEventListener('click', () => navigate('manage'));
+        window.addItemToPending = addItemToPending;
+
+        // Setup Pull-to-Refresh Listeners
+        contentArea.addEventListener('touchstart', handleTouchStart, { passive: false });
+        contentArea.addEventListener('touchmove', handleTouchMove, { passive: false });
+        contentArea.addEventListener('touchend', handleTouchEnd);
+        contentArea.addEventListener('touchcancel', handleTouchEnd);
+    }
+
+    /** Main entry point */
+    window.onload = function() {
+        setupListeners();
+        loadData();
+    };
+
+</script>
+</body>
+</html>
