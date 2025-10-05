@@ -17,7 +17,7 @@ spec:
         app: shopping-nurio-me
     spec:
       containers:
-        - name: shopping-nurio-me-container
+        - name: shopping-nurio-me
           image: nginx:latest # Will be replaced by CI/CD
           ports:
             - containerPort: 80
