@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: shopping-nurio-me-ingress
+  namespace: shopping-nurio-me
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-cert-manager
+spec:
+  rules:
+    - host: shopping.nurio.me
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: shopping-nurio-me-service
+                port:
+                  number: 80
+  tls:
+    - hosts:
+        - shopping.nurio.me
+      secretName: shopping-nurio-me-tls

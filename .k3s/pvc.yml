@@ -1,0 +1,14 @@
+# pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: shopping-nurio-me-pvc
+  namespace: shopping-nurio-me
+  labels:
+    app: shopping-nurio-me
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi

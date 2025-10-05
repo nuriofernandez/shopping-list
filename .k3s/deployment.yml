@@ -1,0 +1,30 @@
+# deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shopping-nurio-me-deployment
+  namespace: shopping-nurio-me
+  labels:
+    app: shopping-nurio-me
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: shopping-nurio-me
+  template:
+    metadata:
+      labels:
+        app: shopping-nurio-me
+    spec:
+      containers:
+        - name: shopping-nurio-me-container
+          image: nginx:latest # Will be replaced by CI/CD
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: persistent-storage
+              mountPath: /app/data
+      volumes:
+        - name: persistent-storage
+          persistentVolumeClaim:
+            claimName: shopping-nurio-me-pvc
